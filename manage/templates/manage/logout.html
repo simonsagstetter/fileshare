@@ -1,0 +1,11 @@
+{% extends 'manage/base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Log out' %}{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="text-center">
+    <h1 class="display-4">{% trans 'Successfully logged out!' %}</h1>
+    <a class="lead" href="{% url 'manage:login' %}">{% trans 'Log in again' %}</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends 'libary/base.html' %}
+{% load i18n static %}
+{% block title %}{% trans 'Folders' %}{% endblock %}
+{% block content %}
+{% include 'libary/navbar.html' %}
+<div class="container" style="margin-top: 3%;">
+  <hr />
+    <a class="btn btn-outline-primary" href="{% url 'libary:folders' %}">{% trans 'Back to home' %}</a>
+    <button class="btn btn-outline-danger" style="float: right;" type="button" data-toggle="modal" data-target="#removeAll">{% trans 'Delete all' %}</button>
+    <a href="{% url 'trashbasket:restore-all' %}" class="btn btn-outline-success" style="float: right; margin-right: 1%">{% trans 'Restore all' %}</a>
+  <hr />
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 2.5%;"></th>
+            <th scope="col" style="width: 2.5%;"></th>
+            <th scope="col" style="width: 50%;">Name</th>
+            <th scope="col" style="width: 15%;">Action</th>
+            <th scope="col" style="width: 30%;">Last modified</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for folders in folders %}
+            <tr>
+              <td scope="row">
+                <input type="checkbox" name="selected">
+              </td>
+              <td>
+                <img src="{% static 'img/svg/folder01.svg' %}"/>
+              </td>
+              <td>
+                  {{ folders.folder_name }}
+              </td>
+              <td>
+                <a style="text-decoration: none;" href="#" data-toggle="tooltip" data-placement="left" title="Remove">
+                  <img src="{% static 'img/svg/trash_basket01.svg' %}" data-toggle="modal" data-target="#removeFolder"/>
+                </a>
+                <a style="text-decoration: none;" href="{% url 'trashbasket:restore-folder' id=folders.id %}">
+                  <img src="{% static 'img/svg/restore01.svg' %}"/ data-toggle="tooltip" data-placement="right" title="Restore">
+                </a>
+              </td>
+              <td>
+                {{ folders.modified }}
+              </td>
+            </tr>
+            <!-- Modal to confirm a permanent removal -->
+            <div class="modal fade" id="removeFolder" tabindex="-1" role="dialog" aria-labelledby="removeFolderCenterTitle" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="removeFolderCenterTitle">{% trans 'Delete folder permanently' %}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <form action="{% url 'trashbasket:remove-folder' id=folders.id %}" method="post">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                      <p>Are you sure that you want to delete <strong>{{ folders.folder_name }}</strong>?</p>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans 'Cancel' %}</button>
+                      <button type="submit" class="btn btn-danger">{% trans 'Delete' %}</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+          {% for files in files %}
+          <tr>
+            <td scope="row">
+              <input type="checkbox" name="selected">
+            </td>
+            <td>
+              <img src="{% static 'img/svg/file01.svg' %}"/>
+            </td>
+            <td>
+              {{ files.real_filename }}
+            </td>
+            <td>
+              <!--a style="text-decoration: none;" href="#" data-toggle="tooltip" data-placement="left" title="Remove">
+                <img src="{% static 'img/svg/trash_basket01.svg' %}" data-toggle="modal" data-target="#removeFolder"/>
+              </a-->
+              <a style="text-decoration: none;" href="{% url 'trashbasket:restore-file' id=files.id %}">
+                <img src="{% static 'img/svg/restore01.svg' %}" data-toggle="tooltip" data-placement="right" title="Restore" />
+              </a>
+            </td>
+            <td>
+              {{ files.modified }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+</div>
+<!-- Modal to confirm permanent removal of all folders-->
+<div class="modal fade" id="removeAll" tabindex="-1" role="dialog" aria-labelledby="removeAllCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="removeAllCenterTitle">{% trans 'Delete all folders permanently' %}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="{% url 'trashbasket:remove-all' %}" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>Are you sure that you want to delete <strong>all folders</strong>?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans 'Cancel' %}</button>
+          <button type="submit" class="btn btn-danger">{% trans 'Delete all' %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_script %}
+<script type="text/javascript">
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  });
+</script>
+{% endblock %}

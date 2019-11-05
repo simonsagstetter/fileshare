@@ -1,0 +1,281 @@
+{% extends 'libary/base.html' %}
+{% load i18n static %}
+{% block title %}{% trans 'Folders' %}{% endblock %}
+{% block content %}
+{% include 'libary/navbar.html' %}
+<div class="container" style="margin-top: 3%;">
+  <a style="position: fixed; bottom: 50px; right: 50px;" href="{% url 'trashbasket:object-list' %}">
+    <img src="{% static 'img/svg/trash_basket01.svg' %}" heigth="50" width="50" data-toggle="tooltip" data-placement="top" title="Trash basket" />
+  </a>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item active" aria-current="page">Home</li>
+    </ol>
+  </nav>
+  <hr />
+  <button class="btn btn-outline-primary" type="button" data-toggle="modal" data-target="#newFolder">{% trans 'New folder' %}</button>
+  <button class="btn btn-outline-primary js-upload-files" type="button" name="button">{% trans 'Upload files' %}</button>
+  <input id="fileupload" type="file" name="upload_file" multiple style="display: none;" data-url="{% url 'files:upload' %}" data-form-data='{"csrfmiddlewaretoken": "{{ csrf_token }}"}' />
+  <hr />
+  {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <p{% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{ message|striptags }}</p>
+        {% endfor %}
+    </div>
+  {% endif %}
+  <table id="folderandfiles" class="table table-hover">
+    <thead>
+      <tr>
+        <th scope="col" style="width: 2.5%;"></th>
+        <th scope="col" style="width: 2.5%;"></th>
+        <th scope="col" style="width: 45%;">Name</th>
+        <th scope="col" style="width: 10%;">Action</th>
+        <th scope="col" style="width: 15%;">Size</th>
+        <th scope="col" style="width: 25%;">Last modified</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for folders in folders %}
+        <tr id="icon{{ folders.id }}">
+          <td scope="row">
+            <input type="checkbox" name="selected">
+          </td>
+          <td>
+            <img src="{% static 'img/svg/folder01.svg' %}"/>
+          </td>
+          <td>
+            <a id="folder{{ folders.id }}" href="{% url 'libary:subfolders' pk=folders.pk %}">{{ folders.folder_name }}</a>
+            <a id="show{{ folders.id }}" style="text-decoration: none; display: none;" href="#" data-toggle="tooltip" data-placement="right" title="Rename">
+                <img src="{% static 'img/svg/edit01.svg' %}" data-toggle="modal" data-target="#updateFolder{{ folders.id }}" />
+            </a>
+          </td>
+          <td>
+            <a href="{% url 'libary:delete-folder' id=folders.id %}">
+              <img src="{% static 'img/svg/trash_basket01.svg' %}" data-toggle="tooltip" data-placement="left" title="Delete" />
+            </a>
+            <a class="dropdown">
+              <a class="dropdown-toggle text-dark" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              </a>
+              <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                <h6 class="dropdown-header">Actions</h6>
+                <button class="dropdown-item" data-toggle="modal" data-target="#moveFolder{{ folders.id }}">Move</button>
+                <button class="dropdown-item" data-toggle="modal" data-target="#transferFolder{{ folders.id }}">Transfer</button>
+              </div>
+            </a>
+          </td>
+          <td>
+              {{ folders.folder_size }} Bytes
+          </td>
+          <td>
+            {{ folders.modified }}
+          </td>
+        </tr>
+        <!-- Modal that can update the folder name-->
+        <div class="modal fade" id="updateFolder{{ folders.id }}" tabindex="-1" role="dialog" aria-labelledby="updateFolderCenterTitle{{ folders.id }}" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="updateFolderCenterTitle{{ folders.id }}">{% trans 'Update folder' %}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <form action="{% url 'libary:update-folder' id=folders.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                  <div class="form-group">
+                    {{ update_folder.folder_name.label }}:
+                    <input class="form-control" type="text" name="folder_name" id="id_folder_name" value="{{ folders.folder_name }}" placeholder="{% trans 'New folder name' %}" required autofocus />
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">{% trans 'Save' %}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- Modal that can move the folder to another one -->
+        <div class="modal fade" id="moveFolder{{ folders.id }}" tabindex="-1" role="dialog" aria-labelledby="moveFolderCenterTitle{{ folders.id }}" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="moveFolderCenterTitle{{ folders.id }}">{% trans 'Move folder' %}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <form action="{% url 'libary:move-folder' id=folders.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                  <div class="form-group">
+                    {{ move_folder.as_p }}
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">{% trans 'Move' %}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- Modal that can transfer the folder to another user -->
+        <div class="modal fade" id="transferFolder{{ folders.id }}" tabindex="-1" role="dialog" aria-labelledby="transferFolderCenterTitle{{ folders.id }}" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="transferFolderCenterTitle{{ folders.id }}">{% trans 'Move folder' %}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <form action="{% url 'libary:change-owner' id=folders.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                  <div class="form-group">
+                    {{ change_owner.as_p }}
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">{% trans 'Move' %}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- Script in Loop for unique ids -->
+        <script type="text/javascript">
+          $("#icon{{ folders.id }}").hover(function() {
+              $("#show{{ folders.id }}").show();
+          });
+          $("#icon{{ folders.id }}").mouseleave(function() {
+              $("#show{{ folders.id }}").hide();
+          });
+        </script>
+        <!-- END Script in Loop for unique ids -->
+      {% endfor %}
+      {% for files in files %}
+      <tr id="icon{{ files.id }}">
+        <td scope="row">
+          <input type="checkbox" name="selected">
+        </td>
+        <td>
+          <img src="{% static 'img/svg/file01.svg' %}"/>
+        </td>
+        <td>
+          <a id="" href="{{ files.upload_file.url }}">{{ files.real_filename }}</a>
+          <a id="show{{ files.id }}" style="text-decoration: none; display: none;" href="#" data-toggle="tooltip" data-placement="right" title="Rename">
+              <img src="{% static 'img/svg/edit01.svg' %}" data-toggle="modal" data-target="#updateFile{{ files.id }}" />
+          </a>
+        </td>
+        <td>
+          <a href="{% url 'files:delete-file' id=files.id %}">
+            <img src="{% static 'img/svg/trash_basket01.svg' %}" data-toggle="tooltip" data-placement="left" title="Delete" />
+          </a>
+        </td>
+        <td>
+          {{ files.upload_file.size|filesizeformat }}
+        </td>
+        <td>
+          {{ files.modified }}
+        </td>
+      </tr>
+      <!-- Modal that can update the file name-->
+      <div class="modal fade" id="updateFile{{ files.id }}" tabindex="-1" role="dialog" aria-labelledby="updateFileCenterTitle{{ files.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="updateFileCenterTitle{{ files.id }}">{% trans 'Update file' %}</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <form action="{% url 'files:update-file' id=files.id %}" method="post">
+              {% csrf_token %}
+              <div class="modal-body">
+                <div class="form-group">
+                  {{ update_file.real_filename.label }}:
+                  <input class="form-control" type="text" name="real_filename" id="id_real_filename" value="{{ files.real_filename }}" placeholder="{% trans 'New file name' %}" required autofocus />
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">{% trans 'Save' %}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <!-- Script in Loop for unique ids -->
+      <script type="text/javascript">
+        $("#icon{{ files.id }}").hover(function() {
+            $("#show{{ files.id }}").show();
+        });
+        $("#icon{{ files.id }}").mouseleave(function() {
+            $("#show{{ files.id }}").hide();
+        });
+      </script>
+      <!-- END Script in Loop for unique ids -->
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<!-- Modal that creates a folder without a related folder -->
+<div class="modal fade" id="newFolder" tabindex="-1" role="dialog" aria-labelledby="newFolderCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newFolderCenterTitle">{% trans 'New folder' %}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="{% url 'libary:create-folder' %}" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="form-group">
+            {{ form.folder_name.label }}:
+            {{ form.folder_name }}
+          </div>
+          <div class="form-group">
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors|striptags }}
+              </div>
+            {% endif %}
+            {% if form.folder_name.errors %}
+              <div class="alert alert-danger" role="alert">
+                {{ form.folder_name.errors|striptags }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">{% trans 'Create' %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="modal-progress" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Uploading...</h5>
+      </div>
+      <div class="modal-body">
+        <div class="progress">
+          <div class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_script %}
+  <script type="text/javascript">
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    });
+  </script>
+{% endblock %}
